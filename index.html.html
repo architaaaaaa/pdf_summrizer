@@ -1,27 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI-Powered PDF Summarizer</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div class="container">
-      <h1>Intelligent PDF Summarizer</h1>
-      <p>Upload a document and get a concise summary in seconds.</p>
-      <div class="upload-area">
-        <input type="file" id="pdf-file-input" accept=".pdf" />
-        <button id="summarize-button">Summarize Document</button>
-      </div>
-      <div id="status-message"></div>
-      <div id="summary-output">
-        <h2>Summary:</h2>
-        <p id="summary-text"></p>
-        <h3>Key Takeaways:</h3>
-        <ul id="key-takeaways-list"></ul>
-      </div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Summarizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F3F4F6;
+        }
+        .container {
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="container bg-white rounded-2xl shadow-xl p-8 space-y-8">
+        <h1 class="text-4xl font-bold text-center text-gray-900">PDF Summarizer</h1>
+
+        <!-- File Upload Section -->
+        <div class="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center transition-all duration-300 hover:border-blue-500 hover:bg-gray-50">
+            <input type="file" id="pdf_file" class="hidden" accept="application/pdf">
+            <label for="pdf_file" class="cursor-pointer text-blue-600 hover:text-blue-800 transition-colors">
+                <span id="file_name">Upload a file or drag and drop</span>
+            </label>
+        </div>
+
+        <button id="summarize_btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-2xl shadow-lg transition-transform transform hover:scale-105 active:scale-95 disabled:bg-gray-400 disabled:shadow-none" disabled>
+            Summarize PDF
+        </button>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="hidden text-center text-gray-500">
+            <p>Summarizing... this may take a moment.</p>
+        </div>
+
+        <!-- Summary Output Section -->
+        <div id="summary_output" class="hidden bg-gray-50 rounded-2xl p-6 border border-gray-200">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">Summary</h2>
+            <p id="summary_text" class="whitespace-pre-wrap text-gray-700 leading-relaxed"></p>
+        </div>
+        
+        <!-- Flowchart Section -->
+        <div id="flowchart_section" class="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-800">PDF Summarizer App Flowchart</h2>
+            <div class="prose max-w-none text-gray-700">
+                <p>This flowchart outlines the main logic of the Flask application, from a user uploading a file to receiving a summary.</p>
+                <ul>
+                    <li><strong>1. Initial Request (Homepage)</strong>
+                        <ul>
+                            <li>A user visits the root URL (<code>/</code>) of the web application.</li>
+                            <li>The <code>@app.route('/')</code> decorator triggers the <code>index()</code> function.</li>
+                            <li>The <code>index()</code> function uses <code>render_template('index.html')</code> to serve the HTML form to the user.</li>
+                        </ul>
+                    </li>
+                    <li><strong>2. File Submission</strong>
+                        <ul>
+                            <li>The user selects a PDF file and clicks the "Summarize PDF" button.</li>
+                            <li>The browser sends an HTTP <code>POST</code> request to the <code>/summarize</code> URL, including the PDF file data.</li>
+                        </ul>
+                    </li>
+                    <li><strong>3. Request Handling</strong>
+                        <ul>
+                            <li>The <code>@app.route('/summarize', methods=['POST'])</code> decorator directs the request to the <code>summarize_pdf()</code> function.</li>
+                            <li>The function first checks if a file was included in the request and if it has a <code>.pdf</code> extension.</li>
+                            <li>If the file is missing or the wrong type, the function returns an error message as JSON.</li>
+                        </ul>
+                    </li>
+                    <li><strong>4. Text Extraction</strong>
+                        <ul>
+                            <li>If the file is a valid PDF, the code reads the file's binary data into memory using <code>io.BytesIO()</code>.</li>
+                            <li>A <code>PyPDF2.PdfReader</code> object is created to parse the PDF data.</li>
+                            <li>The code iterates through each page of the PDF, extracting the text and concatenating it into a single string called <code>full_text</code>.</li>
+                        </ul>
+                    </li>
+                    <li><strong>5. Summarization</strong>
+                        <ul>
+                            <li>The <code>full_text</code> string is passed to the <code>simple_summarizer()</code> function.</li>
+                            <li>This function splits the text into individual sentences.</li>
+                            <li>It then takes the first 10 sentences and joins them back together to create a summary string.</li>
+                        </ul>
+                    </li>
+                    <li><strong>6. Response</strong>
+                        <ul>
+                            <li>The <code>summarize_pdf()</code> function receives the summary string.</li>
+                            <li>It packages the summary into a JSON object with the key <code>'summary'</code>.</li>
+                            <li>This JSON response is sent back to the user's browser.</li>
+                            <li>The JavaScript on the webpage receives the JSON and updates the display to show the summarized text.</li>
+                        </ul>
+                    </li>
+                    <li><strong>7. Error Handling</strong>
+                        <ul>
+                            <li>The entire process is wrapped in a <code>try...except</code> block to catch any unexpected errors during file processing or summarization. If an error occurs, a detailed error message is returned to the user instead of the application crashing.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
     </div>
-    <script src="script.js"></script>
-  </body>
+
+    <script>
+        const fileInput = document.getElementById('pdf_file');
+        const fileNameSpan = document.getElementById('file_name');
+        const summarizeBtn = document.getElementById('summarize_btn');
+        const loadingDiv = document.getElementById('loading');
+        const summaryOutputDiv = document.getElementById('summary_output');
+        const summaryTextP = document.getElementById('summary_text');
+
+        // Update file name and enable button when a file is selected
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileNameSpan.textContent = file.name;
+                summarizeBtn.disabled = false;
+            } else {
+                fileNameSpan.textContent = 'Upload a file or drag and drop';
+                summarizeBtn.disabled = true;
+            }
+        });
+
+        // Handle the summarize button click
+        summarizeBtn.addEventListener('click', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            // Show loading indicator and clear previous summary
+            loadingDiv.classList.remove('hidden');
+            summaryOutputDiv.classList.add('hidden');
+            summaryTextP.textContent = '';
+            summarizeBtn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('pdf_file', file);
+
+            try {
+                const response = await fetch('/summarize', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    summaryTextP.textContent = data.summary;
+                } else {
+                    summaryTextP.textContent = `Error: ${data.error}`;
+                }
+            } catch (error) {
+                summaryTextP.textContent = `An unexpected error occurred: ${error.message}`;
+            } finally {
+                loadingDiv.classList.add('hidden');
+                summaryOutputDiv.classList.remove('hidden');
+                summarizeBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
 </html>
