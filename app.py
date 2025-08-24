@@ -15,11 +15,13 @@ app = Flask(__name__)
 # --- Text Summarization Function ---
 def simple_summarizer(text, num_sentences=10):
     """
-    A simple function to summarize text by extracting the first `num_sentences`.
-    This avoids using large machine learning models, ensuring low memory usage.
+    A simple function to summarize text by extracting the first `num_sentences`
+    and returning them as a list of points. This avoids using large machine
+    learning models, ensuring low memory usage.
     """
     sentences = re.split(r'(?<=[.!?])\s+', text)
-    summary = ' '.join(sentences[:num_sentences])
+    # Join sentences with a newline character and a bullet point
+    summary = '\n• ' + '\n• '.join(sentences[:num_sentences])
     return summary
 
 
