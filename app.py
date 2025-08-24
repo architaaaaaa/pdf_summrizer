@@ -11,19 +11,15 @@ import json
 import io
 
 # Initialize the Flask application
-# This is the crucial line that was causing the previous error.
 app = Flask(__name__)
 
 # Load the summarization pipeline from Hugging Face.
-# We're using the 'sshleifer/distilbart-cnn-12-6' model, which is a good
-# general-purpose summarization model.
+# We're now using 'sshleifer/distilbart-cnn-6-6', which is a much smaller
+# and more memory-efficient model for free hosting tiers like Render.
 try:
-    summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
+    summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-6-6")
 except Exception as e:
     print(f"Error loading the summarization model: {e}")
-    # You might want to handle this error more gracefully, but for a simple
-    # app, printing the error and proceeding is fine. The summarization
-    # will fail later if the model isn't loaded.
     summarizer = None
 
 
@@ -40,36 +36,28 @@ def summarize_pdf():
     """
     Handles the PDF file upload, extracts text, and returns a summary.
     """
-    # Check if a file was uploaded in the request
     if 'pdf_file' not in request.files:
         return jsonify({'error': 'No file part in the request'}), 400
 
     file = request.files['pdf_file']
 
-    # If the user submits an empty form, the browser might send an empty file.
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
 
-    # Ensure the uploaded file is a PDF
     if file and file.filename.endswith('.pdf'):
         try:
-            # Read the PDF file from the in-memory stream
             pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
             full_text = ""
 
-            # Extract text page by page
             for page_num in range(len(pdf_reader.pages)):
                 page = pdf_reader.pages[page_num]
                 full_text += page.extract_text()
 
             # The summarizer model has a maximum token limit.
-            # We'll truncate the text to fit the model's input size.
-            # This is a simple but effective way to handle large documents.
             max_input_length = summarizer.tokenizer.model_max_length
             if len(full_text) > max_input_length:
                 full_text = full_text[:max_input_length]
 
-            # Generate the summary using the loaded pipeline
             if summarizer:
                 summary_output = summarizer(full_text, max_length=150, min_length=30, do_sample=False)
                 summary_text = summary_output[0]['summary_text']
@@ -78,7 +66,6 @@ def summarize_pdf():
                 return jsonify({'error': 'Summarization model not loaded.'}), 500
 
         except Exception as e:
-            # Handle potential errors during PDF processing or summarization
             return jsonify({'error': f'An error occurred: {str(e)}'}), 500
     else:
         return jsonify({'error': 'Invalid file format. Please upload a PDF file.'}), 400
@@ -86,4 +73,7 @@ def summarize_pdf():
 
 # Run the application
 if __name__ == '__main__':
+    # The 'host' parameter is set to '0.0.0.0' to listen on all public IPs,
+    # and the 'port' is fetched from the environment variables provided by Render.
+    # The `debug=False` line is important for a production environment.
     app.run(host="0.0.0.0", port=os.environ.get("PORT", 5000), debug=False)
