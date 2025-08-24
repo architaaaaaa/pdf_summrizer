@@ -1,26 +1,26 @@
 # app.py
 # This script creates a simple Flask web application to summarize PDF files.
-# It uses the Hugging Face transformers library for summarization and PyPDF2
-# for PDF text extraction.
+# It uses PyPDF2 for PDF text extraction and a basic text summarization function.
 
 import os
 from flask import Flask, request, jsonify, render_template
 import PyPDF2
-from transformers import pipeline
 import json
 import io
+import re
 
 # Initialize the Flask application
 app = Flask(__name__)
 
-# Load the summarization pipeline from Hugging Face.
-# We're now using 'sshleifer/distilbart-cnn-6-6', which is a much smaller
-# and more memory-efficient model for free hosting tiers like Render.
-try:
-    summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-6-6")
-except Exception as e:
-    print(f"Error loading the summarization model: {e}")
-    summarizer = None
+# --- Text Summarization Function ---
+def simple_summarizer(text, num_sentences=10):
+    """
+    A simple function to summarize text by extracting the first `num_sentences`.
+    This avoids using large machine learning models, ensuring low memory usage.
+    """
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    summary = ' '.join(sentences[:num_sentences])
+    return summary
 
 
 # --- Web Routes ---
@@ -53,17 +53,10 @@ def summarize_pdf():
                 page = pdf_reader.pages[page_num]
                 full_text += page.extract_text()
 
-            # The summarizer model has a maximum token limit.
-            max_input_length = summarizer.tokenizer.model_max_length
-            if len(full_text) > max_input_length:
-                full_text = full_text[:max_input_length]
-
-            if summarizer:
-                summary_output = summarizer(full_text, max_length=150, min_length=30, do_sample=False)
-                summary_text = summary_output[0]['summary_text']
-                return jsonify({'summary': summary_text})
-            else:
-                return jsonify({'error': 'Summarization model not loaded.'}), 500
+            # Generate the summary using the simple summarizer function
+            summary_text = simple_summarizer(full_text)
+            
+            return jsonify({'summary': summary_text})
 
         except Exception as e:
             return jsonify({'error': f'An error occurred: {str(e)}'}), 500
@@ -73,7 +66,4 @@ def summarize_pdf():
 
 # Run the application
 if __name__ == '__main__':
-    # The 'host' parameter is set to '0.0.0.0' to listen on all public IPs,
-    # and the 'port' is fetched from the environment variables provided by Render.
-    # The `debug=False` line is important for a production environment.
     app.run(host="0.0.0.0", port=os.environ.get("PORT", 5000), debug=False)
